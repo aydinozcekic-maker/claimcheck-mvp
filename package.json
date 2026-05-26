@@ -1,0 +1,15 @@
+{
+  "name": "claimcheck-mvp",
+  "version": "0.1.0",
+  "description": "An evidence-based hallucination finder for LLM answers.",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "dev": "node --watch src/server.mjs",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

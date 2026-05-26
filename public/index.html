@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ClaimCheck | Hallucination Finder</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <header class="hero">
+      <nav>
+        <div class="brand"><span class="mark"></span> ClaimCheck</div>
+        <div id="status" class="pill">Checking setup...</div>
+      </nav>
+      <div class="hero-grid">
+        <section>
+          <p class="eyebrow">Evidence-based answer review</p>
+          <h1>Find unsupported claims before they travel.</h1>
+          <p class="intro">Break an AI answer into factual claims, test each one against supplied or retrieved evidence, and receive an auditable risk report.</p>
+        </section>
+        <aside class="method">
+          <p class="eyebrow">Pipeline</p>
+          <div><b>01</b> Extract atomic claims</div>
+          <div><b>02</b> Retrieve evidence</div>
+          <div><b>03</b> Verify and score</div>
+        </aside>
+      </div>
+    </header>
+
+    <main>
+      <form id="analysis-form" class="panel">
+        <div class="panel-head">
+          <h2>Analyze an answer</h2>
+          <button type="button" id="load-example" class="secondary">Load example</button>
+        </div>
+        <label>
+          Question
+          <textarea id="question" rows="2" placeholder="Who founded OpenAI?"></textarea>
+        </label>
+        <label>
+          Model answer <span class="required">required</span>
+          <textarea id="answer" rows="5" required placeholder="Paste the answer that should be fact-checked."></textarea>
+        </label>
+        <label>
+          Evidence text <span class="muted">optional; separate documents with ---</span>
+          <textarea id="sourceText" rows="6" placeholder="Paste authoritative passages here."></textarea>
+        </label>
+        <label>
+          Evidence URLs <span class="muted">optional; one public URL per line</span>
+          <textarea id="sourceUrls" rows="3" placeholder="https://example.org/official-source"></textarea>
+        </label>
+        <div class="action-row">
+          <button id="submit" type="submit">Run fact check</button>
+          <span id="message" aria-live="polite"></span>
+        </div>
+      </form>
+
+      <section id="report" class="panel report hidden" aria-live="polite">
+        <div class="panel-head">
+          <h2>Verification report</h2>
+          <span class="muted" id="claim-count"></span>
+        </div>
+        <div id="metrics" class="metrics"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Claim</th><th>Status</th><th>Explanation and evidence</th></tr>
+            </thead>
+            <tbody id="results"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <footer>Verdicts are bounded by retrieved evidence. Review high-impact decisions with primary sources.</footer>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
