@@ -14,6 +14,10 @@ test("hallucination score weights contradictions above missing evidence", () => 
     supported: 1,
     contradicted: 1,
     not_enough_info: 1,
+    kept: 0,
+    softened: 0,
+    corrected: 0,
+    abstained: 0,
     hallucination_score: 0.467
   });
 });

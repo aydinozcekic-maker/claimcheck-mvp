@@ -15,14 +15,14 @@
       <div class="hero-grid">
         <section>
           <p class="eyebrow">Evidence-based answer review</p>
-          <h1>Find unsupported claims before they travel.</h1>
-          <p class="intro">Break an AI answer into factual claims, test each one against supplied or retrieved evidence, and receive an auditable risk report.</p>
+          <h1>Check claims. Withhold guesses. Publish safer answers.</h1>
+          <p class="intro">Break an AI answer into factual claims, test each one against evidence, and rewrite unsupported specifics before they travel.</p>
         </section>
         <aside class="method">
           <p class="eyebrow">Pipeline</p>
           <div><b>01</b> Extract atomic claims</div>
           <div><b>02</b> Retrieve evidence</div>
-          <div><b>03</b> Verify and score</div>
+          <div><b>03</b> Verify and rewrite safely</div>
         </aside>
       </div>
     </header>
@@ -42,6 +42,14 @@
           <textarea id="answer" rows="5" required placeholder="Paste the answer that should be fact-checked."></textarea>
         </label>
         <label>
+          Verification mode
+          <select id="mode">
+            <option value="standard">Standard - general questions (70% base target)</option>
+            <option value="careful" selected>Careful - publishing and research (85% base target)</option>
+            <option value="high_stakes">High Stakes - medical, legal, financial, safety (95% base target)</option>
+          </select>
+        </label>
+        <label>
           Evidence text <span class="muted">optional; separate documents with ---</span>
           <textarea id="sourceText" rows="6" placeholder="Paste authoritative passages here."></textarea>
         </label>
@@ -50,7 +58,7 @@
           <textarea id="sourceUrls" rows="3" placeholder="https://example.org/official-source"></textarea>
         </label>
         <div class="action-row">
-          <button id="submit" type="submit">Run fact check</button>
+          <button id="submit" type="submit">Verify and create safe answer</button>
           <span id="message" aria-live="polite"></span>
         </div>
       </form>
@@ -61,17 +69,25 @@
           <span class="muted" id="claim-count"></span>
         </div>
         <div id="metrics" class="metrics"></div>
+        <article class="safe-answer">
+          <div class="safe-head">
+            <p class="eyebrow">Safe rewrite</p>
+            <span id="policy-target" class="pill light"></span>
+          </div>
+          <p id="safe-answer-text"></p>
+          <p id="safe-answer-explanation" class="muted"></p>
+        </article>
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>Claim</th><th>Status</th><th>Explanation and evidence</th></tr>
+              <tr><th>Claim and risk</th><th>Verdict</th><th>Action</th><th>Explanation and evidence</th></tr>
             </thead>
             <tbody id="results"></tbody>
           </table>
         </div>
       </section>
     </main>
-    <footer>Verdicts are bounded by retrieved evidence. Review high-impact decisions with primary sources.</footer>
+    <footer>Safe rewrites are based on retrieved evidence and should be reviewed with primary sources for high-impact decisions.</footer>
     <script type="module" src="./app.js"></script>
   </body>
 </html>

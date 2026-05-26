@@ -56,7 +56,7 @@ main { display: grid; gap: 22px; margin: -28px auto 0; max-width: 1120px; paddin
 .panel-head { align-items: center; display: flex; justify-content: space-between; margin-bottom: 20px; }
 h2 { font-size: 23px; letter-spacing: -.035em; margin: 0; }
 label { color: var(--muted); display: block; font-size: 13px; font-weight: bold; letter-spacing: .02em; margin: 17px 0; }
-textarea {
+textarea, select {
   background: #fbfaf6;
   border: 1px solid var(--line);
   border-radius: 11px;
@@ -68,7 +68,8 @@ textarea {
   resize: vertical;
   width: 100%;
 }
-textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(21,117,104,.12); outline: none; }
+select { height: 48px; }
+textarea:focus, select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(21,117,104,.12); outline: none; }
 .muted { color: var(--muted); font-size: 13px; font-weight: normal; }
 .required { background: var(--mint); border-radius: 99px; color: var(--teal); font-size: 11px; margin-left: 6px; padding: 3px 7px; text-transform: uppercase; }
 button {
@@ -92,16 +93,35 @@ button.secondary { background: var(--mint); color: var(--teal); padding: 10px 15
 .metric { background: #faf8f3; border: 1px solid var(--line); border-radius: 13px; padding: 15px; }
 .metric b { display: block; font-size: 28px; letter-spacing: -.04em; }
 .metric span { color: var(--muted); font-size: 12px; text-transform: uppercase; }
+.safe-answer {
+  background: #eff7f3;
+  border: 1px solid #cce4d9;
+  border-radius: 15px;
+  margin-bottom: 27px;
+  padding: 20px 22px;
+}
+.safe-head { align-items: center; display: flex; justify-content: space-between; }
+.safe-head .eyebrow { color: var(--teal); margin: 0; }
+.pill.light { background: white; border-color: #cce4d9; color: var(--teal); }
+#safe-answer-text { font-size: 17px; line-height: 1.6; margin: 18px 0 10px; }
+#safe-answer-explanation { margin: 0; }
 .table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; font-size: 14px; width: 100%; }
 th { color: var(--muted); font-size: 12px; letter-spacing: .08em; text-align: left; text-transform: uppercase; }
 th, td { border-bottom: 1px solid var(--line); padding: 14px 12px; vertical-align: top; }
-td:first-child { font-weight: bold; min-width: 220px; width: 30%; }
-td:nth-child(2) { width: 150px; }
+td:first-child { font-weight: bold; min-width: 210px; width: 25%; }
+td:nth-child(2) { width: 138px; }
+td:nth-child(3) { width: 128px; }
 .badge { border-radius: 99px; display: inline-block; font-size: 11px; font-weight: bold; letter-spacing: .03em; padding: 5px 9px; }
 .SUPPORTED { background: var(--green-bg); color: var(--green); }
 .CONTRADICTED { background: var(--red-bg); color: var(--red); }
 .NOT_ENOUGH_INFO { background: var(--amber-bg); color: var(--amber); }
+.action.KEEP { background: var(--green-bg); color: var(--green); }
+.action.CORRECT { background: var(--red-bg); color: var(--red); }
+.action.SOFTEN, .action.ABSTAIN { background: var(--amber-bg); color: var(--amber); }
+.risk { color: var(--muted); display: block; font-size: 11px; font-weight: normal; margin-top: 7px; text-transform: uppercase; }
+.risk.high { color: var(--red); }
+.threshold { color: var(--muted); display: block; font-size: 11px; margin-top: 7px; }
 .reason { margin: 0 0 8px; }
 .citation { color: var(--muted); display: block; font-size: 12px; margin-top: 5px; }
 .citation a { color: var(--teal); }

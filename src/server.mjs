@@ -35,11 +35,12 @@ function validatedInput(payload) {
   const sourceUrls = Array.isArray(payload.sourceUrls)
     ? payload.sourceUrls.map((url) => String(url).trim()).filter(Boolean)
     : [];
+  const mode = String(payload.mode || "standard");
   if (!answer) throw new Error("An answer to analyze is required.");
   if (answer.length > 30000 || sourceText.length > 200000) {
     throw new Error("The answer or evidence text exceeds the MVP size limit.");
   }
-  return { question, answer, sourceText, sourceUrls };
+  return { question, answer, sourceText, sourceUrls, mode };
 }
 
 async function serveStatic(pathname, response) {

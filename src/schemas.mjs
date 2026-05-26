@@ -13,9 +13,10 @@ export const claimExtractionSchema = {
             type: "string",
             enum: ["date", "entity", "number", "location", "causal", "other"]
           },
-          importance: { type: "string", enum: ["high", "medium", "low"] }
+          importance: { type: "string", enum: ["high", "medium", "low"] },
+          risk: { type: "string", enum: ["high", "medium", "low"] }
         },
-        required: ["claim", "type", "importance"]
+        required: ["claim", "type", "importance", "risk"]
       }
     }
   },
@@ -34,4 +35,14 @@ export const verificationSchema = {
     confidence: { type: "number" }
   },
   required: ["label", "reason", "confidence"]
+};
+
+export const safeRewriteSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    safe_answer: { type: "string" },
+    explanation: { type: "string" }
+  },
+  required: ["safe_answer", "explanation"]
 };

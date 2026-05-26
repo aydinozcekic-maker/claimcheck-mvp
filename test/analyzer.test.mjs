@@ -15,8 +15,9 @@ class StubClient {
 test("analyzer produces an evidence-backed contradicted verdict and summary", async () => {
   const analyzer = new AnswerAnalyzer({
     client: new StubClient([
-      { claims: [{ claim: "OpenAI was founded in 2016.", type: "date", importance: "high" }] },
-      { label: "CONTRADICTED", reason: "The supplied source states December 2015.", confidence: 0.98 }
+      { claims: [{ claim: "OpenAI was founded in 2016.", type: "date", importance: "high", risk: "high" }] },
+      { label: "CONTRADICTED", reason: "The supplied source states December 2015.", confidence: 0.98 },
+      { safe_answer: "OpenAI was founded in December 2015.", explanation: "Corrected from the supplied evidence." }
     ])
   });
   const report = await analyzer.analyze({
@@ -28,20 +29,28 @@ test("analyzer produces an evidence-backed contradicted verdict and summary", as
       url: null,
       origin: "provided",
       quality: 0.8
-    }]
+    }],
+    mode: "careful"
   });
   assert.equal(report.claims[0].label, "CONTRADICTED");
+  assert.equal(report.claims[0].action, "CORRECT");
+  assert.equal(report.claims[0].required_confidence, 0.9);
+  assert.equal(report.safe_answer, "OpenAI was founded in December 2015.");
   assert.equal(report.summary.hallucination_score, 1);
+  assert.equal(report.summary.corrected, 1);
 });
 
 test("analyzer refuses to verify from model memory when evidence is absent", async () => {
   const analyzer = new AnswerAnalyzer({
     client: new StubClient([
-      { claims: [{ claim: "A fact exists.", type: "other", importance: "low" }] }
+      { claims: [{ claim: "A fact exists.", type: "other", importance: "low", risk: "low" }] },
+      { safe_answer: "I could not verify that detail.", explanation: "No evidence was retrieved." }
     ])
   });
   const report = await analyzer.analyze({ answer: "A fact exists.", sources: [] });
   assert.equal(report.claims[0].label, "NOT_ENOUGH_INFO");
+  assert.equal(report.claims[0].action, "ABSTAIN");
+  assert.equal(report.claims[0].confidence, 0);
   assert.match(report.claims[0].reason, /No relevant evidence/);
 });
 

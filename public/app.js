@@ -26,6 +26,7 @@ document.querySelector("#load-example").addEventListener("click", () => {
     "OpenAI was founded in 2016 by Elon Musk and Sam Altman. It is headquartered in New York.";
   document.querySelector("#sourceText").value =
     "OpenAI was founded in December 2015 with several founding members including Sam Altman and Elon Musk. Its headquarters are in San Francisco, California.";
+  document.querySelector("#mode").value = "careful";
 });
 
 function evidenceHtml(evidence) {
@@ -41,16 +42,21 @@ function render(reportData) {
   const summary = reportData.summary;
   const score = `${Math.round(summary.hallucination_score * 100)}%`;
   metrics.innerHTML = [
-    [score, "Risk score"],
-    [summary.supported, "Supported"],
-    [summary.contradicted, "Contradicted"],
-    [summary.not_enough_info, "Not enough info"]
+    [score, "Original risk"],
+    [summary.kept, "Claims kept"],
+    [summary.corrected, "To correct"],
+    [summary.softened + summary.abstained, "Withheld / softened"]
   ].map(([value, label]) => `<div class="metric"><b>${value}</b><span>${label}</span></div>`).join("");
   document.querySelector("#claim-count").textContent = `${summary.total_claims} factual claims analyzed`;
+  document.querySelector("#safe-answer-text").textContent = reportData.safe_answer;
+  document.querySelector("#safe-answer-explanation").textContent = reportData.safe_answer_explanation;
+  document.querySelector("#policy-target").textContent =
+    `${reportData.policy.label} mode | ${Math.round(reportData.policy.threshold * 100)}% base target`;
   results.innerHTML = reportData.claims.map((item) => `
     <tr>
-      <td>${escapeHtml(item.claim)}</td>
+      <td>${escapeHtml(item.claim)}<span class="risk ${item.risk}">${escapeHtml(item.risk)} risk</span></td>
       <td><span class="badge ${item.label}">${item.label.replaceAll("_", " ")}</span></td>
+      <td><span class="badge action ${item.action}">${item.action}</span><span class="threshold">Needs ${Math.round(item.required_confidence * 100)}%</span></td>
       <td>
         <p class="reason">${escapeHtml(item.reason)} <span class="muted">(${Math.round(item.confidence * 100)}% confidence)</span></p>
         ${evidenceHtml(item.evidence)}
@@ -64,12 +70,13 @@ function render(reportData) {
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   message.className = "";
-  message.textContent = "Extracting claims and checking evidence...";
+  message.textContent = "Checking claims and preparing a safer answer...";
   submit.disabled = true;
   try {
     const payload = {
       question: document.querySelector("#question").value,
       answer: document.querySelector("#answer").value,
+      mode: document.querySelector("#mode").value,
       sourceText: document.querySelector("#sourceText").value,
       sourceUrls: document.querySelector("#sourceUrls").value.split(/\r?\n/).filter(Boolean)
     };

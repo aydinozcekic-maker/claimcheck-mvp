@@ -1,5 +1,6 @@
 import { retrieveEvidence } from "./evidence.mjs";
-import { claimExtractionSchema, verificationSchema } from "./schemas.mjs";
+import { applyPolicy, normalizeMode, VERIFICATION_MODES } from "./policy.mjs";
+import { claimExtractionSchema, safeRewriteSchema, verificationSchema } from "./schemas.mjs";
 import { summarize } from "./scoring.mjs";
 
 export class AnswerAnalyzer {
@@ -16,7 +17,9 @@ export class AnswerAnalyzer {
       instructions: [
         "Extract atomic, factual, externally verifiable claims from an assistant answer.",
         "Split compound statements. Exclude opinions, advice, hedging, and non-factual prose.",
-        "Keep wording self-contained and preserve dates, numbers, and entity qualifiers."
+        "Keep wording self-contained and preserve dates, numbers, and entity qualifiers.",
+        "Assign high risk to exact dates, numbers, citations, named identities, safety-sensitive, medical, legal, or financial claims.",
+        "Assign medium risk to ordinary externally verifiable facts and low risk only to minor factual context."
       ].join(" "),
       input: `Question:\n${question}\n\nAnswer:\n${answer}`
     });
@@ -29,7 +32,7 @@ export class AnswerAnalyzer {
         ...claim,
         label: "NOT_ENOUGH_INFO",
         reason: "No relevant evidence was retrieved for this claim.",
-        confidence: 1,
+        confidence: 0,
         evidence
       };
     }
@@ -53,7 +56,40 @@ export class AnswerAnalyzer {
     return { ...claim, ...verdict, confidence, evidence };
   }
 
-  async analyze({ question = "", answer, sources }) {
+  async rewriteSafely(answer, results, mode) {
+    if (!results.length) {
+      return {
+        safe_answer: answer,
+        explanation: "No externally verifiable factual claims were selected for intervention."
+      };
+    }
+
+    const auditedClaims = results.map((result) => ({
+      claim: result.claim,
+      risk: result.risk,
+      label: result.label,
+      confidence: result.confidence,
+      required_confidence: result.required_confidence,
+      action: result.action,
+      reason: result.reason,
+      evidence: result.evidence.map((item) => `${item.source}: ${item.text}`)
+    }));
+    return this.client.structured({
+      name: "safe_answer",
+      schema: safeRewriteSchema,
+      instructions: [
+        "Rewrite an assistant answer using only the audit results and evidence supplied.",
+        "KEEP claims may remain. SOFTEN claims must be qualified and must not sound certain.",
+        "For CORRECT claims, state a correction only if the included evidence directly supports it; otherwise omit the detail or say it could not be verified.",
+        "For ABSTAIN claims, do not repeat the unsupported factual detail; explicitly acknowledge missing reliable evidence when relevant.",
+        "Do not add new factual claims. Keep the answer concise and useful."
+      ].join(" "),
+      input: `Verification mode: ${VERIFICATION_MODES[mode].label}\n\nOriginal answer:\n${answer}\n\nAudited claims:\n${JSON.stringify(auditedClaims, null, 2)}`
+    });
+  }
+
+  async analyze({ question = "", answer, sources, mode = "standard" }) {
+    const selectedMode = normalizeMode(mode);
     const claims = await this.extractClaims(question, answer);
     const results = [];
     for (const claim of claims) {
@@ -61,8 +97,19 @@ export class AnswerAnalyzer {
         tavilyApiKey: this.tavilyApiKey,
         fetchImpl: this.fetchImpl
       });
-      results.push(await this.verifyClaim(claim, evidence));
+      const result = await this.verifyClaim(claim, evidence);
+      results.push(applyPolicy(result, selectedMode));
     }
-    return { question, answer, claims: results, summary: summarize(results) };
+    const safeRewrite = await this.rewriteSafely(answer, results, selectedMode);
+    return {
+      question,
+      answer,
+      mode: selectedMode,
+      policy: VERIFICATION_MODES[selectedMode],
+      safe_answer: safeRewrite.safe_answer,
+      safe_answer_explanation: safeRewrite.explanation,
+      claims: results,
+      summary: summarize(results)
+    };
   }
 }

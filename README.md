@@ -1,6 +1,6 @@
 # ClaimCheck MVP
 
-ClaimCheck is an evidence-based hallucination finder for LLM answers. It splits an answer into atomic factual claims, retrieves evidence from text or URLs supplied by the user and optionally the web, verifies each claim against that evidence, and calculates a simple risk score.
+ClaimCheck is an evidence-based hallucination finder and safe-answer gate for LLM answers. It splits an answer into atomic factual claims, retrieves evidence from text or URLs supplied by the user and optionally the web, verifies each claim, and rewrites answers so unsupported specifics are not confidently published.
 
 ## What It Does
 
@@ -9,7 +9,9 @@ ClaimCheck is an evidence-based hallucination finder for LLM answers. It splits 
 - Selects relevant passages from supplied sources.
 - Optionally retrieves web evidence through Tavily.
 - Classifies claims as `SUPPORTED`, `CONTRADICTED`, or `NOT_ENOUGH_INFO`.
-- Shows reasons, evidence excerpts, confidence, and a hallucination risk score.
+- Tags claims by risk and applies explicit confidence targets.
+- Decides whether each claim should be `KEEP`, `SOFTEN`, `CORRECT`, or `ABSTAIN`.
+- Produces an evidence-bounded safe rewrite and an original-answer risk score.
 
 The verifier is evidence-bound: when no evidence can be retrieved, it returns `NOT_ENOUGH_INFO` rather than checking a fact from model memory.
 
@@ -21,7 +23,8 @@ Browser UI
   -> Claim extraction (OpenAI Responses API, Structured Outputs)
   -> Evidence retrieval (pasted sources, public URLs, optional Tavily)
   -> Claim verification (OpenAI Responses API, evidence only)
-  -> Score and HTML report
+  -> Confidence-target policy (keep, soften, correct, abstain)
+  -> Safe rewrite and HTML report
 ```
 
 Key files:
@@ -29,6 +32,7 @@ Key files:
 - `src/analyzer.mjs`: extraction, retrieval, verification orchestration.
 - `src/openai-client.mjs`: minimal Responses API client with strict JSON Schema output.
 - `src/evidence.mjs`: source preparation, relevance ranking, Tavily adapter, source weights.
+- `src/policy.mjs`: confidence modes, risk floors, and publication actions.
 - `src/scoring.mjs`: report counts and weighted hallucination score.
 - `src/server.mjs`: native Node HTTP API and static app server.
 - `public/`: English browser interface.
@@ -57,7 +61,19 @@ Requirements: Node.js 20 or newer.
    npm start
    ```
 
-4. Open `http://localhost:3000` and select **Load example** to test a contradicted founding-year claim against supplied evidence.
+4. Open `http://localhost:3000`, choose a verification mode, and select **Load example** to test corrections against supplied evidence.
+
+## Verification Modes
+
+Inspired by *Why Language Models Hallucinate* (Kalai et al., 2025), the app makes abstention an explicit behavior rather than forcing every factual detail through.
+
+| Mode | Base confidence target | Use case |
+| --- | ---: | --- |
+| Standard | 70% | General factual content |
+| Careful | 85% | Research, publishing, business |
+| High Stakes | 95% | Medical, legal, financial, or safety content |
+
+Risky exact facts such as dates, numbers, citations, identities, and safety-sensitive statements require at least 90% confidence even in less strict modes. A claim below its required threshold is softened or withheld instead of published as certain.
 
 No package installation is needed; the MVP uses Node's built-in HTTP server and `fetch`.
 
@@ -81,6 +97,7 @@ Request:
 {
   "question": "Who founded OpenAI?",
   "answer": "OpenAI was founded in 2016 by Elon Musk and Sam Altman.",
+  "mode": "careful",
   "sourceText": "OpenAI was founded in December 2015 with several founding members including Sam Altman and Elon Musk.",
   "sourceUrls": []
 }
@@ -95,17 +112,22 @@ Response shape:
       "claim": "OpenAI was founded in 2016.",
       "type": "date",
       "importance": "high",
+      "risk": "high",
       "label": "CONTRADICTED",
       "reason": "The evidence states that OpenAI was founded in December 2015.",
       "confidence": 0.98,
+      "required_confidence": 0.9,
+      "action": "CORRECT",
       "evidence": []
     }
   ],
+  "safe_answer": "OpenAI was founded in December 2015.",
   "summary": {
     "total_claims": 1,
     "supported": 0,
     "contradicted": 1,
     "not_enough_info": 0,
+    "corrected": 1,
     "hallucination_score": 1
   }
 }
@@ -124,6 +146,8 @@ The MVP uses the requested weighted formula:
 ```
 
 This score is an indicator for review prioritization, not a probability that an answer is false.
+
+The safe rewrite is a proposed revised answer based on the audited claims; production deployments should independently audit the rewritten output before automatically publishing high-stakes content.
 
 ## Run Tests
 
@@ -147,3 +171,7 @@ The code calls the OpenAI Responses API and uses Structured Outputs with `text.f
 
 - [Responses API reference](https://platform.openai.com/docs/api-reference/responses/create)
 - [Structured model outputs guide](https://platform.openai.com/docs/guides/structured-outputs)
+
+## Design Reference
+
+- Adam Tauman Kalai, Ofir Nachum, Santosh S. Vempala, and Edwin Zhang. *Why Language Models Hallucinate*. arXiv:2509.04664v1, September 4, 2025.

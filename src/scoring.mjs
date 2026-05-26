@@ -13,12 +13,20 @@ export function summarize(results) {
     total_claims: results.length,
     supported: 0,
     contradicted: 0,
-    not_enough_info: 0
+    not_enough_info: 0,
+    kept: 0,
+    softened: 0,
+    corrected: 0,
+    abstained: 0
   };
   for (const result of results) {
     if (result.label === "SUPPORTED") counts.supported += 1;
     if (result.label === "CONTRADICTED") counts.contradicted += 1;
     if (result.label === "NOT_ENOUGH_INFO") counts.not_enough_info += 1;
+    if (result.action === "KEEP") counts.kept += 1;
+    if (result.action === "SOFTEN") counts.softened += 1;
+    if (result.action === "CORRECT") counts.corrected += 1;
+    if (result.action === "ABSTAIN") counts.abstained += 1;
   }
   return { ...counts, hallucination_score: hallucinationScore(results) };
 }

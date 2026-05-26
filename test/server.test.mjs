@@ -19,7 +19,7 @@ test("server exposes health and the browser application", async () => {
     const pageResponse = await fetch(`http://localhost:${port}/`);
     const page = await pageResponse.text();
     assert.equal(pageResponse.status, 200);
-    assert.match(page, /Find unsupported claims before they travel/);
+    assert.match(page, /Check claims\. Withhold guesses\. Publish safer answers\./);
   } finally {
     server.close();
   }
