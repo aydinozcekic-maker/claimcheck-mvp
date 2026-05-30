@@ -1,6 +1,6 @@
 # ClaimCheck MVP
 
-ClaimCheck is an evidence-based hallucination finder and safe-answer gate for LLM answers. It splits an answer into atomic factual claims, retrieves evidence from text or URLs supplied by the user and optionally the web, verifies each claim, and rewrites answers so unsupported specifics are not confidently published.
+ClaimCheck is an evidence-based hallucination finder and safe-answer gate for LLM answers. It splits an answer into atomic factual claims, retrieves evidence from text or URLs supplied by the user and optionally the web, verifies each claim with the strongest available verifier, and rewrites answers so unsupported specifics are not confidently published.
 
 ## What It Does
 
@@ -8,6 +8,7 @@ ClaimCheck is an evidence-based hallucination finder and safe-answer gate for LL
 - Extracts atomic verifiable claims using an OpenAI model.
 - Selects relevant passages from supplied sources.
 - Optionally retrieves web evidence through Tavily.
+- Uses deterministic date, math, and simple code-output verifiers before falling back to an LLM verifier.
 - Classifies claims as `SUPPORTED`, `CONTRADICTED`, or `NOT_ENOUGH_INFO`.
 - Tags claims by risk and applies explicit confidence targets.
 - Decides whether each claim should be `KEEP`, `SOFTEN`, `CORRECT`, or `ABSTAIN`.
@@ -22,7 +23,8 @@ Browser UI
   -> POST /api/analyze
   -> Claim extraction (OpenAI Responses API, Structured Outputs)
   -> Evidence retrieval (pasted sources, public URLs, optional Tavily)
-  -> Claim verification (OpenAI Responses API, evidence only)
+  -> Verifier routing (date, math, code, or LLM)
+  -> Claim verification (deterministic tools first, LLM evidence verifier as fallback)
   -> Confidence-target policy (keep, soften, correct, abstain)
   -> Safe rewrite and HTML report
 ```
@@ -32,11 +34,14 @@ Key files:
 - `src/analyzer.mjs`: extraction, retrieval, verification orchestration.
 - `src/openai-client.mjs`: minimal Responses API client with strict JSON Schema output.
 - `src/evidence.mjs`: source preparation, relevance ranking, Tavily adapter, source weights.
+- `src/verifiers/`: deterministic date, math, and code-output verifiers plus routing.
 - `src/policy.mjs`: confidence modes, risk floors, and publication actions.
 - `src/scoring.mjs`: report counts and weighted hallucination score.
 - `src/server.mjs`: native Node HTTP API and static app server.
 - `public/`: English browser interface.
 - `test/`: dependency-free unit tests.
+- `eval_cases/`: tool-verifiable benchmark cases inspired by self-play evaluation.
+- `tools/run-eval.mjs`: evaluates deterministic verifier cases.
 
 ## Quick Start
 
@@ -74,6 +79,19 @@ Inspired by *Why Language Models Hallucinate* (Kalai et al., 2025), the app make
 | High Stakes | 95% | Medical, legal, financial, or safety content |
 
 Risky exact facts such as dates, numbers, citations, identities, and safety-sensitive statements require at least 90% confidence even in less strict modes. A claim below its required threshold is softened or withheld instead of published as certain.
+
+## Verifier Tools
+
+Inspired by *Absolute Zero: Reinforced Self-play Reasoning with Zero Data* (Zhao et al., 2025), ClaimCheck now prefers verifiable tools when a claim can be checked mechanically. This does not train a new model; it upgrades the runtime verification layer.
+
+| Verifier | Checks | Example |
+| --- | --- | --- |
+| `date` | Years and exact dates found in claim/evidence text | `Founded in 2016` vs evidence saying `December 2015` |
+| `math` | Hallucination-score arithmetic and simple percentage-change claims | `The score is 37%` from `2 contradicted, 1 unsupported, 8 total` |
+| `code` | Simple JavaScript output claims from fenced snippets | `The function returns 9` when execution returns `8` |
+| `llm` | Ordinary textual factual claims | headquarters, founders, entity relationships |
+
+The verifier routing logic lives in `src/verifiers/index.mjs`. Deterministic verifiers return confidence `1.0` when they can directly compute or compare the result, and the LLM verifier is used only when no deterministic verifier can resolve the claim.
 
 No package installation is needed; the MVP uses Node's built-in HTTP server and `fetch`.
 
@@ -113,6 +131,7 @@ Response shape:
       "type": "date",
       "importance": "high",
       "risk": "high",
+      "verifier": "date",
       "label": "CONTRADICTED",
       "reason": "The evidence states that OpenAI was founded in December 2015.",
       "confidence": 0.98,
@@ -157,9 +176,29 @@ npm test
 
 Tests run locally with stub model output and do not require keys or network access.
 
+## Run Deterministic Evaluations
+
+The project includes JSONL benchmark cases that can be verified without LLM calls:
+
+```powershell
+npm run eval
+```
+
+You can generate additional math-score cases with:
+
+```powershell
+node tools/generate-eval-cases.mjs
+node tools/run-eval.mjs eval_cases/generated_math_claims.jsonl
+```
+
+This is the practical project-level lesson from Absolute Zero: use self-generated, tool-verifiable cases to improve the checker over time.
+
 ## Current MVP Limits
 
 - URL ingestion handles text and HTML pages, not uploaded PDFs.
+- The code verifier is intentionally narrow: it handles simple JavaScript snippets, blocks unsafe features, and is intended for verification/evaluation cases rather than arbitrary user code execution.
+- The math verifier covers selected deterministic patterns, not full symbolic mathematics.
+- The date verifier compares explicit dates/years, not temporal logic over complex events.
 - URL ingestion rejects obvious private IP addresses; production deployments should also apply DNS-resolution and network egress controls against SSRF.
 - Pasted excerpts are assigned a reasonable default source quality; a production system should store source provenance explicitly.
 - Web search is optional and depends on a configured Tavily account.
@@ -175,3 +214,4 @@ The code calls the OpenAI Responses API and uses Structured Outputs with `text.f
 ## Design Reference
 
 - Adam Tauman Kalai, Ofir Nachum, Santosh S. Vempala, and Edwin Zhang. *Why Language Models Hallucinate*. arXiv:2509.04664v1, September 4, 2025.
+- Andrew Zhao et al. *Absolute Zero: Reinforced Self-play Reasoning with Zero Data*. arXiv:2505.03335v3, October 17, 2025.

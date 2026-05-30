@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.mjs",
     "dev": "node --watch src/server.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "eval": "node tools/run-eval.mjs"
   },
   "engines": {
     "node": ">=20"
